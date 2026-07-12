@@ -1,0 +1,33 @@
+CODE OF CONDUCT - ACME TECHNOLOGIES PVT LTD
+Effective Date: January 1, 2026
+Document Version: 1.8
+
+1. PROFESSIONAL CONDUCT
+All employees are expected to treat colleagues, clients, and partners with respect and professionalism. Harassment, discrimination, or bullying of any kind based on gender, race, religion, age, disability, sexual orientation, or any other protected characteristic will result in disciplinary action up to and including termination.
+
+2. ANTI-HARASSMENT AND POSH POLICY
+The company maintains a zero-tolerance policy toward sexual harassment in line with the POSH Act. An Internal Complaints Committee (ICC) has been constituted to address complaints. Employees can report incidents confidentially via posh@acmetech.com or directly to any ICC member listed on the HR portal. Retaliation against complainants is strictly prohibited.
+
+3. CONFIDENTIALITY
+Employees must not disclose confidential company information, trade secrets, client data, or proprietary source code to any external party during or after employment, except as required by law. Violation may result in legal action in addition to termination.
+
+4. CONFLICT OF INTEREST
+Employees must disclose any outside business interests, consulting arrangements, or relationships that could conflict with company interests. This includes romantic relationships between employees in a direct reporting line, which must be disclosed to HR.
+
+5. SOCIAL MEDIA POLICY
+Employees should not post confidential company information, client information, or unreleased product details on personal social media. Employees speaking publicly about the company in a professional capacity (e.g., conferences) should clarify that views expressed are their own unless explicitly authorized.
+
+6. DRESS CODE
+The company follows a business-casual dress code on regular days. Client-facing roles may have stricter requirements as communicated by their respective managers.
+
+7. ATTENDANCE AND PUNCTUALITY
+Standard working hours are 9:30 AM to 6:30 PM, Monday through Friday, with a 1-hour lunch break. Flexible hours may be granted on a case-by-case basis with manager approval. Habitual lateness (more than 3 instances per month without prior communication) may result in a formal warning.
+
+8. USE OF COMPANY ASSETS
+Laptops, software licenses, and access credentials provided by the company are for official use only. Installation of unauthorized software is prohibited. All assets must be returned upon resignation or termination.
+
+9. DISCIPLINARY PROCESS
+Violations of this code of conduct follow a 3-stage process: verbal warning, written warning, and termination, depending on severity. Gross misconduct (e.g., harassment, fraud, data theft) may result in immediate termination without the warning stages.
+
+10. WHISTLEBLOWER PROTECTION
+Employees reporting genuine concerns about fraud, ethics violations, or legal non-compliance in good faith are protected from retaliation under the company's Whistleblower Policy. Reports can be made anonymously via the ethics hotline listed on the HR portal.
