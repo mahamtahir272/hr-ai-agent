@@ -24,11 +24,13 @@ from langchain_core.messages import HumanMessage, AIMessage
 import config
 from src.tools.rag_tool import answer_hr_policy_question
 from src.tools.sql_tool import SQL_TOOLS
+from src.tools.ticket_tool import TICKET_TOOLS, create_ticket
 from src.agent.session import current_session
+from src.agent.reflection import reflect_on_answer, format_reflection_footer
 
 
 # ── All tools the agent can choose from ──────────────────────────────────────
-ALL_TOOLS = [answer_hr_policy_question] + SQL_TOOLS
+ALL_TOOLS = [answer_hr_policy_question] + SQL_TOOLS + TICKET_TOOLS
 
 # How many past turns to keep in memory. Each turn = human + AI messages.
 # Keeping 10 turns = ~20 messages. Beyond this, older turns are dropped
@@ -100,7 +102,42 @@ class ConversationSession:
         final_message = result["messages"][-1]
         response_text = final_message.content
 
-        # Add the assistant's response to our history for next turn
+        # ── Reflection step ────────────────────────────────────────────────
+        # Evaluate the draft answer before returning it to the user.
+        # Only reflect on policy (RAG) answers — SQL tool answers are
+        # deterministic (database values) and don't need quality checking.
+        is_policy_answer = any(
+            getattr(m, "tool_calls", None) and
+            any(tc.get("name") == "answer_hr_policy_question"
+                for tc in (m.tool_calls or []))
+            for m in result["messages"]
+        )
+
+        if is_policy_answer:
+            reflection = reflect_on_answer(
+                question=user_message,
+                draft_answer=response_text,
+            )
+
+            if reflection.should_escalate and current_session.is_logged_in():
+                # Auto-create a ticket — the agent decided this needs HR
+                ticket = create_ticket(
+                    query_text=user_message,
+                    agent_response=response_text,
+                    confidence_score=reflection.confidence,
+                    category="policy",
+                )
+                response_text += (
+                    f"\n\n---\n"
+                    f"⚠️ I've automatically raised a support ticket "
+                    f"(#{ticket['ticket_id']}) because I'm not fully "
+                    f"confident in this answer. HR will follow up within "
+                    f"2 business days."
+                )
+            else:
+                response_text += format_reflection_footer(reflection)
+
+        # Add the (possibly reflection-annotated) response to history
         self.message_history.append({"role": "assistant", "content": response_text})
 
         return response_text
