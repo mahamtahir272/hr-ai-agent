@@ -19,20 +19,27 @@ if not GROQ_API_KEY:
     )
 
 # ---- Model settings ----
-# Using the 8B model as default during development — it has a SEPARATE daily
-# token quota from the 70B model on Groq's free tier, so switching here avoids
-# repeatedly hitting the 70B model's 100K tokens/day limit during testing and
-# eval runs. Swap back to "llama-3.3-70b-versatile" for final demo/recording
-# if you want slightly higher-quality responses once development is done.
+# Main agent model — needs to be powerful for reliable tool-calling.
+# 70B has a 100K tokens/day free limit on Groq.
+# DO NOT switch this to 8B — it hallucinates non-existent tool names.
 LLM_MODEL = "llama-3.3-70b-versatile"
-LLM_TEMPERATURE = 0.1                    # low temp = more factual, less creative
+LLM_TEMPERATURE = 0.1
 
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"     # free, local, runs via sentence-transformers
+# Reflection model — used only for scoring draft answers, NOT for generation
+# or tool-calling. This is a simpler task the 8B model handles reliably.
+# Using a separate model here gives us a separate 500K tokens/day quota,
+# effectively decoupling reflection cost from the main agent's budget.
+# Two-model architecture: 70B generates, 8B evaluates. Standard production pattern.
+REFLECTION_MODEL = "llama-3.1-8b-instant"
+REFLECTION_TEMPERATURE = 0.0   # zero temp for deterministic, consistent scoring
+
+# ---- Embedding model ----
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"   # free, local, via sentence-transformers
 
 # ---- RAG settings ----
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
-TOP_K_RESULTS = 4   # how many chunks to retrieve per query
+TOP_K_RESULTS = 4
 
 # ---- Paths ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,10 +48,9 @@ SYNTHETIC_DIR = os.path.join(BASE_DIR, "data", "synthetic")
 CHROMA_DIR = os.path.join(BASE_DIR, "data", "chroma_db")
 
 if __name__ == "__main__":
-    # Run this file directly to sanity-check your setup:
-    # python config.py
     print("Config loaded successfully.")
-    print(f"LLM model: {LLM_MODEL}")
-    print(f"Embedding model: {EMBEDDING_MODEL}")
-    print(f"Groq key loaded: {'yes' if GROQ_API_KEY else 'no'}")
-    print(f"Docs directory: {DOCS_DIR}")
+    print(f"Main LLM model:       {LLM_MODEL}")
+    print(f"Reflection model:     {REFLECTION_MODEL}")
+    print(f"Embedding model:      {EMBEDDING_MODEL}")
+    print(f"Groq key loaded:      {'yes' if GROQ_API_KEY else 'no'}")
+    print(f"Docs directory:       {DOCS_DIR}")
