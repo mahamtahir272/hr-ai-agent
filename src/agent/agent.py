@@ -1,15 +1,24 @@
 """
-agent.py — The core HR AI agent with conversation memory.
+agent.py — The core HR Operations Assistant agent.
 
-Memory approach: LangChain's create_agent (1.x API) is stateless by design —
-it takes a messages list and returns an updated messages list. We implement
-memory by keeping the full message history and passing it back on every turn.
-This is the correct pattern for this API version — no separate memory object
-needed, the history IS the memory.
+WHAT THIS FILE DOES:
+- Builds a LangChain agent with all available tools
+- Provides ConversationSession for multi-turn memory
+- Wires reflection (8B model) into every RAG-based answer
+- Auto-escalates low-confidence answers via ticket + email tools
 
-Max history: we keep the last N turns to avoid token bloat across long
-conversations. Each "turn" = 1 human message + 1 AI response + any tool
-call messages in between.
+TOOLS AVAILABLE (16 total):
+  RAG:     answer_hr_policy_question
+  SQL:     get_my_profile, check_my_leave_balance, check_my_leave_history,
+           find_my_manager, get_my_performance_review, get_my_team,
+           get_my_pending_approvals
+  Tickets: escalate_to_hr, check_my_tickets, view_open_hr_tickets
+  Email:   notify_leave_submitted, notify_leave_decision,
+           send_onboarding_email, notify_hr_ticket_created
+
+MODEL ARCHITECTURE:
+  Generation:  llama-3.3-70b-versatile (100K tokens/day)
+  Reflection:  llama-3.1-8b-instant (500K tokens/day, separate quota)
 """
 
 import os
@@ -19,33 +28,39 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from langchain.agents import create_agent
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage
 
 import config
 from src.tools.rag_tool import answer_hr_policy_question
 from src.tools.sql_tool import SQL_TOOLS
 from src.tools.ticket_tool import TICKET_TOOLS, create_ticket
+from src.tools.email_tool import EMAIL_TOOLS
 from src.agent.session import current_session
 from src.agent.reflection import reflect_on_answer, format_reflection_footer
 
 
 # ── All tools the agent can choose from ──────────────────────────────────────
-ALL_TOOLS = [answer_hr_policy_question] + SQL_TOOLS + TICKET_TOOLS
+ALL_TOOLS = [answer_hr_policy_question] + SQL_TOOLS + TICKET_TOOLS + EMAIL_TOOLS
 
-# How many past turns to keep in memory. Each turn = human + AI messages.
-# Keeping 10 turns = ~20 messages. Beyond this, older turns are dropped
-# to avoid hitting token limits on long conversations.
+# How many past turns to keep in memory (each turn = 1 human + 1 AI message)
 MAX_HISTORY_TURNS = 10
 
 
 # ── System prompt ─────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """HR assistant for Acme Technologies.
+SYSTEM_PROMPT = """HR Operations Assistant for Acme Technologies.
 
 - Policy questions (leave rules, benefits, conduct) -> answer_hr_policy_question
-- Personal data (own balance, history, manager, review) -> matching check_my_*/get_my_*/find_my_* tool. These always use the logged-in user automatically.
-- Manager-only actions (team, approvals) -> get_my_team / get_my_pending_approvals. Will be denied if user isn't a manager.
+- Personal data (own balance, history, manager, review) -> check_my_*/get_my_*/find_my_* tools
+- Manager actions (team, approvals) -> get_my_team / get_my_pending_approvals
+- Ticket escalation (can't answer confidently) -> escalate_to_hr, then notify_hr_ticket_created
+- Email notifications -> notify_leave_submitted / notify_leave_decision / send_onboarding_email
+- View own tickets -> check_my_tickets
 
-Rules: Never approve/reject leave yourself — only a human manager can. If user uses "my"/"I", prefer personal-data tools over policy tools. If no tool fits, say so honestly. Be concise."""
+Rules:
+- Never approve/reject leave yourself — human managers only
+- After escalating a ticket, always call notify_hr_ticket_created to alert HR
+- Email tools fire AFTER human decisions, never autonomously for approvals
+- If user says "my"/"I", prefer personal-data tools over policy tools
+- If no tool fits, say so honestly and offer to escalate"""
 
 
 def build_agent():
@@ -56,7 +71,6 @@ def build_agent():
         api_key=config.GROQ_API_KEY,
         max_retries=2,
     )
-
     agent = create_agent(
         model=llm,
         tools=ALL_TOOLS,
@@ -72,40 +86,31 @@ class ConversationSession:
     Usage:
         session = ConversationSession(agent)
         response = session.chat("What's my leave balance?")
-        response = session.chat("Can I take 5 more days?")  # agent remembers previous answer
-        session.clear()  # reset history when user logs out
+        response = session.chat("Can I take 5 more days?")
+        session.clear()  # reset on logout
     """
 
     def __init__(self, agent, max_turns: int = MAX_HISTORY_TURNS):
         self.agent = agent
         self.max_turns = max_turns
-        self.message_history = []   # running list of all messages this session
+        self.message_history = []
 
     def chat(self, user_message: str) -> str:
-        """
-        Send a message and get a response, maintaining conversation history.
-        The full history is passed to the agent on every call — this is how
-        the agent "remembers" previous turns without a separate memory object.
-        """
-        # Add the new user message to history
+        """Send a message, get a response, maintain conversation history."""
         self.message_history.append({"role": "user", "content": user_message})
 
         # Trim to last N turns to avoid token bloat
-        # Each turn = 1 user message + 1+ assistant messages, so multiply by 2
         max_messages = self.max_turns * 2
         trimmed_history = self.message_history[-max_messages:]
 
-        # Run the agent with full history
         result = self.agent.invoke({"messages": trimmed_history})
 
-        # Extract the final text response
         final_message = result["messages"][-1]
         response_text = final_message.content
 
         # ── Reflection step ────────────────────────────────────────────────
-        # Evaluate the draft answer before returning it to the user.
-        # Only reflect on policy (RAG) answers — SQL tool answers are
-        # deterministic (database values) and don't need quality checking.
+        # Only reflect on RAG-based answers (policy questions).
+        # SQL tool answers are deterministic — no quality check needed.
         is_policy_answer = any(
             getattr(m, "tool_calls", None) and
             any(tc.get("name") == "answer_hr_policy_question"
@@ -120,7 +125,6 @@ class ConversationSession:
             )
 
             if reflection.should_escalate and current_session.is_logged_in():
-                # Auto-create a ticket — the agent decided this needs HR
                 ticket = create_ticket(
                     query_text=user_message,
                     agent_response=response_text,
@@ -137,9 +141,7 @@ class ConversationSession:
             else:
                 response_text += format_reflection_footer(reflection)
 
-        # Add the (possibly reflection-annotated) response to history
         self.message_history.append({"role": "assistant", "content": response_text})
-
         return response_text
 
     def clear(self):
@@ -148,38 +150,35 @@ class ConversationSession:
 
     @property
     def turn_count(self) -> int:
-        """How many complete back-and-forth turns have happened."""
         return len(self.message_history) // 2
 
 
 def ask(agent, question: str) -> str:
-    """
-    Single-turn ask — no memory. Used by evals and one-off tests.
-    For interactive use, use ConversationSession instead.
-    """
+    """Single-turn ask with no memory. Used by evals."""
     result = agent.invoke({"messages": [{"role": "user", "content": question}]})
     return result["messages"][-1].content
 
 
 if __name__ == "__main__":
-    # Test multi-turn conversation memory
-    print("Logging in as E004 (Aisha Khan)...\n")
+    print("HR Operations Assistant — startup test\n")
+    print(f"Main model:       {config.LLM_MODEL}")
+    print(f"Reflection model: {config.REFLECTION_MODEL}")
+    print(f"Total tools:      {len(ALL_TOOLS)}")
+    print(f"Tool names:       {[t.name for t in ALL_TOOLS]}\n")
+
+    print("Logging in as E004 (Aisha Khan)...")
     current_session.login("E004")
 
     agent = build_agent()
     conversation = ConversationSession(agent)
 
-    # These questions are deliberately connected — the second one
-    # only makes sense in the context of the first answer.
     test_turns = [
         "What's my leave balance?",
         "Based on that, how many more annual leave days can I take this year?",
-        "What does the policy say about carrying forward unused leave?",
-        "So would my unused days carry forward or be forfeited?",
     ]
 
     for question in test_turns:
-        print(f"USER [{conversation.turn_count + 1}]: {question}")
+        print(f"\nUSER [{conversation.turn_count + 1}]: {question}")
         response = conversation.chat(question)
-        print(f"AGENT: {response}\n")
+        print(f"AGENT: {response}")
         print("-" * 60)
