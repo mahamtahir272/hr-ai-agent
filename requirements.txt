@@ -1,4 +1,5 @@
 langchain
+langchain-core
 langchain-community
 langchain-text-splitters
 langchain-groq
@@ -12,3 +13,5 @@ python-dotenv
 pymupdf
 pypdf
 pandas
+numpy
+pydantic

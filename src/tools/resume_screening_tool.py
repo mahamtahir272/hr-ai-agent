@@ -423,9 +423,8 @@ def screen_multiple_candidates(job_id: str, candidates_json: str) -> str:
     return "\n".join(lines)
 
 
-@tool
-def list_open_positions() -> str:
-    """List all currently open job postings with skills and experience requirements."""
+def _list_open_jobs() -> list[dict]:
+    """Return all currently open job postings as dictionaries."""
     conn = _get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -436,8 +435,15 @@ def list_open_positions() -> str:
         WHERE j.status = 'open'
         ORDER BY j.posted_on DESC
     """)
-    rows = cur.fetchall()
+    rows = [dict(row) for row in cur.fetchall()]
     conn.close()
+    return rows
+
+
+@tool
+def list_open_positions() -> str:
+    """List all currently open job postings with skills and experience requirements."""
+    rows = _list_open_jobs()
     if not rows:
         return "No open positions at this time."
     lines = [f"Open positions ({len(rows)} total):\n"]

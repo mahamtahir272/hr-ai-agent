@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Operations Assistant — Acme Technologies</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0F1923;
+    --navy2:   #162030;
+    --navy3:   #1E2D3D;
+    --panel:   #F8FAFC;
+    --border:  #E2E8F0;
+    --teal:    #00C896;
+    --teal2:   #00A87D;
+    --amber:   #F59E0B;
+    --red:     #EF4444;
+    --text:    #1E293B;
+    --text2:   #64748B;
+    --text3:   #94A3B8;
+    --white:   #FFFFFF;
+    --mono:    'Courier New', monospace;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    height: 52px;
+    background: var(--navy2);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .topbar-logo {
+    width: 28px; height: 28px;
+    background: var(--teal);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--navy);
+  }
+  .topbar-name { font-size: 15px; font-weight: 600; color: var(--white); }
+  .topbar-sub  { font-size: 12px; color: var(--text3); }
+  .topbar-spacer { flex: 1; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--teal); margin-right: 6px;
+  }
+  .status-text { font-size: 12px; color: var(--text3); display: flex; align-items: center; }
+
+  /* ── Main layout ── */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 240px 1fr 300px;
+    overflow: hidden;
+  }
+
+  /* ── Left sidebar ── */
+  .sidebar {
+    background: var(--navy2);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    padding: 20px 16px;
+    gap: 24px;
+  }
+
+  .employee-card {
+    background: var(--navy3);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .employee-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--teal);
+    color: var(--navy); font-weight: 700; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 10px;
+  }
+  .employee-name  { font-size: 14px; font-weight: 600; color: var(--white); }
+  .employee-role  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .employee-dept  { font-size: 11px; color: var(--teal); margin-top: 4px; font-weight: 500; }
+  .manager-badge {
+    display: inline-block; margin-top: 6px;
+    background: rgba(0,200,150,0.15); color: var(--teal);
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; border: 1px solid rgba(0,200,150,0.3);
+  }
+
+  /* ── Leave balance bars (signature element) ── */
+  .leave-section { }
+  .leave-title { font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--text3); margin-bottom: 10px; }
+  .leave-item { margin-bottom: 10px; }
+  .leave-item-top { display: flex; justify-content: space-between;
+    font-size: 11px; margin-bottom: 4px; }
+  .leave-item-name { color: var(--text3); }
+  .leave-item-val  { color: var(--white); font-weight: 500; font-family: var(--mono); }
+  .leave-bar-track {
+    height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;
+  }
+  .leave-bar-fill {
+    height: 100%; border-radius: 2px;
+    background: var(--teal); transition: width .6s ease;
+  }
+  .leave-bar-fill.warn { background: var(--amber); }
+  .leave-bar-fill.empty { background: var(--red); }
+
+  /* ── Nav ── */
+  .nav-title { font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--text3); margin-bottom: 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 7px; cursor: pointer;
+    font-size: 13px; color: var(--text3); transition: all .15s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--white); }
+  .nav-item.active { background: rgba(0,200,150,0.12); color: var(--teal); }
+  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+  /* ── Chat area ── */
+  .chat-area {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--navy);
+  }
+  .chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+  .chat-header-icon { font-size: 18px; }
+  .chat-header-title { font-size: 15px; font-weight: 600; }
+  .chat-header-sub { font-size: 12px; color: var(--text3); }
+
+  .messages {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 16px;
+    scroll-behavior: smooth;
+  }
+
+  .message { display: flex; gap: 10px; max-width: 85%; }
+  .message.user { flex-direction: row-reverse; align-self: flex-end; }
+  .message.agent { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .message.user .msg-avatar  { background: var(--teal); color: var(--navy); }
+  .message.agent .msg-avatar { background: var(--navy3); color: var(--teal); font-size: 14px; }
+
+  .msg-bubble {
+    padding: 10px 14px; border-radius: 12px;
+    font-size: 13.5px; line-height: 1.6;
+    max-width: 100%;
+  }
+  .message.user  .msg-bubble { background: var(--teal); color: var(--navy); border-radius: 12px 2px 12px 12px; }
+  .message.agent .msg-bubble { background: var(--navy3); color: var(--white); border-radius: 2px 12px 12px 12px; }
+
+  .msg-bubble pre {
+    background: rgba(0,0,0,0.3); padding: 10px 12px;
+    border-radius: 6px; font-size: 12px; overflow-x: auto;
+    margin-top: 8px; font-family: var(--mono);
+  }
+
+  .typing-indicator {
+    display: flex; gap: 4px; align-items: center; padding: 14px;
+    background: var(--navy3); border-radius: 2px 12px 12px 12px;
+  }
+  .typing-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text3); animation: bounce .8s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: .1s; }
+  .typing-dot:nth-child(3) { animation-delay: .2s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-5px); }
+  }
+
+  .chat-input-area {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; gap: 10px; align-items: flex-end;
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1; background: var(--navy3); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 10px 14px; color: var(--white);
+    font-family: 'Inter', sans-serif; font-size: 13.5px;
+    resize: none; min-height: 42px; max-height: 120px; outline: none;
+    line-height: 1.5; transition: border-color .15s;
+  }
+  .chat-input:focus { border-color: var(--teal); }
+  .chat-input::placeholder { color: var(--text3); }
+  .send-btn {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--teal); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--navy); flex-shrink: 0;
+    transition: background .15s; font-weight: 700;
+  }
+  .send-btn:hover { background: var(--teal2); }
+  .send-btn:disabled { background: var(--navy3); color: var(--text3); cursor: default; }
+
+  /* ── Quick prompts ── */
+  .quick-prompts {
+    padding: 0 20px 12px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .quick-prompt {
+    font-size: 11px; padding: 4px 10px; border-radius: 20px;
+    background: var(--navy3); border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text3); cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .quick-prompt:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* ── Right panel ── */
+  .right-panel {
+    background: var(--panel); color: var(--text);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .right-panel-tabs {
+    display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .tab {
+    flex: 1; padding: 12px 8px; font-size: 12px; font-weight: 500;
+    text-align: center; cursor: pointer; color: var(--text2);
+    border-bottom: 2px solid transparent; transition: all .15s;
+  }
+  .tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  .right-content { flex: 1; overflow-y: auto; padding: 16px; }
+
+  /* ── Dashboard cards ── */
+  .dash-section { margin-bottom: 20px; }
+  .dash-section-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text3); margin-bottom: 10px;
+  }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+  }
+  .stat-val { font-size: 22px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+  .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .ticket-item {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
+  }
+  .ticket-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .ticket-id { font-size: 11px; font-family: var(--mono); color: var(--text2); }
+  .ticket-priority {
+    font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px;
+  }
+  .priority-high   { background: #FEE2E2; color: #DC2626; }
+  .priority-medium { background: #FEF3C7; color: #D97706; }
+  .priority-low    { background: #DCFCE7; color: #16A34A; }
+  .ticket-query { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .ticket-meta  { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  .candidate-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; margin-bottom: 8px;
+  }
+  .candidate-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .candidate-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .rec-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .rec-shortlist { background: #DCFCE7; color: #16A34A; }
+  .rec-hold      { background: #FEF3C7; color: #D97706; }
+  .rec-reject    { background: #FEE2E2; color: #DC2626; }
+  .score-bar-track { height: 5px; background: #E2E8F0; border-radius: 3px; margin-bottom: 6px; overflow: hidden; }
+  .score-bar-fill  { height: 100%; border-radius: 3px; background: var(--teal); }
+  .candidate-meta  { font-size: 11px; color: var(--text2); }
+
+  /* ── Resume upload ── */
+  .upload-section { padding: 0; }
+  .upload-form { display: flex; flex-direction: column; gap: 10px; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--text); }
+  .form-select, .form-input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 12px; color: var(--text);
+    background: var(--white); outline: none; font-family: 'Inter', sans-serif;
+  }
+  .form-select:focus, .form-input:focus { border-color: #0F1923; }
+  .form-textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 12px; color: var(--text);
+    background: var(--white); outline: none; font-family: 'Inter', sans-serif;
+    resize: vertical; min-height: 100px; line-height: 1.5;
+  }
+  .form-textarea:focus { border-color: #0F1923; }
+  .submit-btn {
+    padding: 9px 16px; background: var(--navy);
+    color: var(--white); border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: background .15s;
+  }
+  .submit-btn:hover { background: var(--navy3); }
+  .submit-btn:disabled { background: var(--text3); cursor: default; }
+
+  .screening-result {
+    background: var(--navy); color: var(--white); border-radius: 8px;
+    padding: 12px; font-size: 12px; line-height: 1.7; margin-top: 8px;
+    font-family: var(--mono); white-space: pre-wrap;
+  }
+
+  /* ── Login screen ── */
+  .login-screen {
+    position: fixed; inset: 0; background: var(--navy);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .login-card {
+    background: var(--navy2); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 36px 32px; width: 360px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .login-logo {
+    width: 48px; height: 48px; background: var(--teal); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; color: var(--navy);
+  }
+  .login-title { font-size: 22px; font-weight: 700; }
+  .login-sub   { font-size: 13px; color: var(--text3); margin-top: -12px; }
+  .login-label { font-size: 12px; font-weight: 500; color: var(--text3); margin-bottom: 6px; display: block; }
+  .login-input {
+    width: 100%; padding: 10px 14px; background: var(--navy3);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 9px;
+    color: var(--white); font-size: 14px; outline: none;
+    font-family: 'Inter', sans-serif; transition: border-color .15s;
+  }
+  .login-input:focus { border-color: var(--teal); }
+  .login-btn {
+    width: 100%; padding: 12px; background: var(--teal); border: none;
+    border-radius: 9px; color: var(--navy); font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: background .15s;
+  }
+  .login-btn:hover { background: var(--teal2); }
+  .login-btn:disabled { background: var(--navy3); color: var(--text3); cursor: default; }
+  .login-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+    color: #FCA5A5; padding: 10px 12px; border-radius: 7px; font-size: 12px; }
+  .login-hint { font-size: 11px; color: var(--text3); text-align: center; }
+  .hint-ids { font-family: var(--mono); color: var(--teal); }
+
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--text3); font-size: 13px; }
+  .empty-icon  { font-size: 32px; margin-bottom: 10px; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">HR</div>
+    <div>
+      <div class="login-title">HR Operations</div>
+      <div class="login-sub">Acme Technologies</div>
+    </div>
+    <div>
+      <label class="login-label">Employee ID</label>
+      <input class="login-input" id="loginInput" type="text"
+        placeholder="e.g. E004" maxlength="10" />
+    </div>
+    <div id="loginError" style="display:none" class="login-error"></div>
+    <button class="login-btn" id="loginBtn" onclick="login()">Sign in</button>
+    <div class="login-hint">
+      Try: <span class="hint-ids">E004</span> (employee) ·
+           <span class="hint-ids">E003</span> (manager) ·
+           <span class="hint-ids">E009</span> (HR Director)
+    </div>
+  </div>
+</div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-logo">HR</div>
+  <div>
+    <div class="topbar-name">HR Operations Assistant</div>
+    <div class="topbar-sub">Acme Technologies</div>
+  </div>
+  <div class="topbar-spacer"></div>
+  <div class="status-text">
+    <div class="status-dot"></div>
+    <span id="statusText">Connected</span>
+  </div>
+  <button onclick="logout()" style="margin-left:16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#94A3B8;padding:5px 12px;border-radius:7px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">
+    Sign out
+  </button>
+</div>
+
+<!-- Main layout -->
+<div class="main">
+
+  <!-- Left sidebar -->
+  <div class="sidebar">
+    <div class="employee-card">
+      <div class="employee-avatar" id="avatarInitials">--</div>
+      <div class="employee-name" id="empName">Loading...</div>
+      <div class="employee-role" id="empRole"></div>
+      <div class="employee-dept" id="empDept"></div>
+      <div id="managerBadge" style="display:none" class="manager-badge">Manager Access</div>
+    </div>
+
+    <div class="leave-section">
+      <div class="leave-title">Leave Balance 2025</div>
+      <div id="leaveBars">
+        <div class="empty-state" style="padding:8px;font-size:12px;">Loading...</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="nav-title">Navigation</div>
+      <div class="nav-item active" onclick="setView('chat')" id="nav-chat">
+        <span class="nav-icon">💬</span> Chat
+      </div>
+      <div class="nav-item" onclick="setView('dashboard')" id="nav-dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" id="nav-hr" onclick="setView('hr')" style="display:none">
+        <span class="nav-icon">👥</span> HR Tools
+      </div>
+      <div class="nav-item" onclick="setView('tickets')" id="nav-tickets">
+        <span class="nav-icon">🎫</span> My Tickets
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="chat-area" id="chatView">
+    <div class="chat-header">
+      <div class="chat-header-icon">🤖</div>
+      <div>
+        <div class="chat-header-title">HR Assistant</div>
+        <div class="chat-header-sub">Ask about policies, leave, your profile, or anything HR-related</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="message agent">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">
+          Hi! I'm your HR Operations Assistant. I can help you with:<br><br>
+          • <strong>Policy questions</strong> — leave rules, benefits, conduct<br>
+          • <strong>Your data</strong> — leave balance, history, manager, reviews<br>
+          • <strong>Support tickets</strong> — raise or track HR queries<br><br>
+          What can I help you with today?
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-prompts" id="quickPrompts">
+      <div class="quick-prompt" onclick="sendQuick('What is my leave balance?')">My leave balance</div>
+      <div class="quick-prompt" onclick="sendQuick('What is the annual leave policy?')">Leave policy</div>
+      <div class="quick-prompt" onclick="sendQuick('Who is my manager?')">My manager</div>
+      <div class="quick-prompt" onclick="sendQuick('What was my last performance review?')">My review</div>
+      <div class="quick-prompt" onclick="sendQuick('What is the dress code?')">Dress code</div>
+    </div>
+
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chatInput" placeholder="Ask anything HR-related..."
+        rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+    <div class="right-panel-tabs">
+      <div class="tab active" onclick="setTab('overview')" id="tab-overview">Overview</div>
+      <div class="tab" onclick="setTab('screen')" id="tab-screen">Screen CV</div>
+      <div class="tab" onclick="setTab('results')" id="tab-results">Results</div>
+    </div>
+
+    <div class="right-content" id="rightContent">
+      <!-- Overview tab default content -->
+      <div id="tabOverview">
+        <div class="dash-section">
+          <div class="dash-section-title">Your Stats</div>
+          <div class="stat-grid" id="statsGrid">
+            <div class="stat-card"><div class="stat-val">—</div><div class="stat-label">Annual leave left</div></div>
+            <div class="stat-card"><div class="stat-val">—</div><div class="stat-label">Sick leave left</div></div>
+          </div>
+        </div>
+        <div class="dash-section" id="pendingSection" style="display:none">
+          <div class="dash-section-title">Pending Approvals</div>
+          <div id="pendingList"></div>
+        </div>
+        <div class="dash-section" id="openTicketsSection" style="display:none">
+          <div class="dash-section-title">Open HR Tickets</div>
+          <div id="openTicketsList"></div>
+        </div>
+      </div>
+
+      <div id="tabScreen" style="display:none">
+        <div class="upload-section">
+          <div class="upload-form">
+            <div>
+              <label class="form-label">Job Position</label>
+              <select class="form-select" id="jobSelect">
+                <option value="">Select a role...</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Candidate Name</label>
+              <input class="form-input" id="candName" placeholder="Full name" />
+            </div>
+            <div>
+              <label class="form-label">Candidate Email</label>
+              <input class="form-input" id="candEmail" placeholder="email@example.com" type="email" />
+            </div>
+            <div>
+              <label class="form-label">Resume / CV Text</label>
+              <textarea class="form-textarea" id="resumeText"
+                placeholder="Paste the candidate's resume here..."></textarea>
+            </div>
+            <button class="submit-btn" id="screenBtn" onclick="screenResume()">
+              Screen Candidate
+            </button>
+            <div id="screeningResult" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tabResults" style="display:none">
+        <div class="dash-section-title" style="margin-bottom:10px">Recent Screenings</div>
+        <div id="resultsList">
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            No screenings yet
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'http://localhost:8000';
+  let sessionId = null;
+  let currentUser = null;
+  let isTyping = false;
+
+  // ── Login / Logout ──────────────────────────────────────────────────────────
+
+  async function login() {
+    const id = document.getElementById('loginInput').value.trim().toUpperCase();
+    if (!id) return;
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Signing in...';
+    document.getElementById('loginError').style.display = 'none';
+
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({employee_id: id})
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Login failed');
+      }
+      const data = await res.json();
+      sessionId = data.session_id;
+      currentUser = data;
+
+      document.getElementById('loginScreen').style.display = 'none';
+      populateSidebar(data);
+      loadLeaveBalance();
+      loadOverviewData();
+      loadJobs();
+      loadScreeningResults();
+
+    } catch(e) {
+      const el = document.getElementById('loginError');
+      el.textContent = e.message; el.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+
+  function logout() {
+    fetch(`${API}/auth/logout`, {method:'POST', headers:{'X-Session-Id': sessionId}});
+    sessionId = null; currentUser = null;
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginInput').value = '';
+    document.getElementById('messages').innerHTML = '';
+  }
+
+  document.getElementById('loginInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  // ── Sidebar population ──────────────────────────────────────────────────────
+
+  function populateSidebar(user) {
+    const initials = user.name.split(' ').map(n => n[0]).join('').slice(0,2);
+    document.getElementById('avatarInitials').textContent = initials;
+    document.getElementById('empName').textContent = user.name;
+    document.getElementById('empRole').textContent = user.role;
+    document.getElementById('empDept').textContent = user.department;
+    document.getElementById('statusText').textContent = `${user.name.split(' ')[0]} · ${user.employee_id}`;
+    if (user.is_manager) {
+      document.getElementById('managerBadge').style.display = 'inline-block';
+      document.getElementById('nav-hr').style.display = 'flex';
+    }
+  }
+
+  async function loadLeaveBalance() {
+    try {
+      const res = await fetch(`${API}/employee/leave`, {headers:{'X-Session-Id': sessionId}});
+      const balances = await res.json();
+      const container = document.getElementById('leaveBars');
+      container.innerHTML = '';
+
+      // Update stats grid too
+      const statsGrid = document.getElementById('statsGrid');
+      statsGrid.innerHTML = '';
+
+      balances.forEach(b => {
+        const pct = b.entitled_days > 0 ? (b.remaining_days / b.entitled_days * 100) : 0;
+        const fillClass = pct === 0 ? 'empty' : pct < 30 ? 'warn' : '';
+
+        container.innerHTML += `
+          <div class="leave-item">
+            <div class="leave-item-top">
+              <span class="leave-item-name">${b.leave_type_name}</span>
+              <span class="leave-item-val">${b.remaining_days}/${b.entitled_days}</span>
+            </div>
+            <div class="leave-bar-track">
+              <div class="leave-bar-fill ${fillClass}" style="width:${pct}%"></div>
+            </div>
+          </div>`;
+
+        statsGrid.innerHTML += `
+          <div class="stat-card">
+            <div class="stat-val">${b.remaining_days}</div>
+            <div class="stat-label">${b.leave_type_name} left</div>
+          </div>`;
+      });
+    } catch(e) { console.error('Leave balance error:', e); }
+  }
+
+  async function loadOverviewData() {
+    if (!currentUser?.is_manager) return;
+    try {
+      const res = await fetch(`${API}/hr/tickets`, {headers:{'X-Session-Id': sessionId}});
+      const tickets = await res.json();
+      if (tickets.length > 0) {
+        document.getElementById('openTicketsSection').style.display = 'block';
+        const list = document.getElementById('openTicketsList');
+        list.innerHTML = tickets.slice(0,3).map(t => `
+          <div class="ticket-item">
+            <div class="ticket-header">
+              <span class="ticket-id">#${t.ticket_id}</span>
+              <span class="ticket-priority priority-${t.priority}">${t.priority}</span>
+            </div>
+            <div class="ticket-query">${t.query_text.slice(0,80)}...</div>
+            <div class="ticket-meta">by ${t.employee_name} · ${t.category}</div>
+          </div>`).join('');
+      }
+    } catch(e) {}
+  }
+
+  async function loadJobs() {
+    try {
+      const res = await fetch(`${API}/hr/jobs`, {headers:{'X-Session-Id': sessionId}});
+      const jobs = await res.json();
+      const sel = document.getElementById('jobSelect');
+      jobs.forEach(j => {
+        const opt = document.createElement('option');
+        opt.value = j.job_id;
+        opt.textContent = `[${j.job_id}] ${j.title}`;
+        sel.appendChild(opt);
+      });
+    } catch(e) {}
+  }
+
+  async function loadScreeningResults() {
+    try {
+      const res = await fetch(`${API}/hr/screenings`, {headers:{'X-Session-Id': sessionId}});
+      if (!res.ok) return;
+      const rows = await res.json();
+      const list = document.getElementById('resultsList');
+      if (!rows.length) return;
+      list.innerHTML = rows.slice(0,8).map(r => `
+        <div class="candidate-card">
+          <div class="candidate-header">
+            <div class="candidate-name">${r.candidate_name}</div>
+            <span class="rec-badge rec-${r.recommendation.toLowerCase()}">${r.recommendation}</span>
+          </div>
+          <div class="score-bar-track">
+            <div class="score-bar-fill" style="width:${Math.round(r.match_score*100)}%"></div>
+          </div>
+          <div class="candidate-meta">${r.job_title} · ${Math.round(r.match_score*100)}% match</div>
+        </div>`).join('');
+    } catch(e) {}
+  }
+
+  // ── Chat ────────────────────────────────────────────────────────────────────
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function sendQuick(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || isTyping || !sessionId) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    isTyping = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    addMessage('user', text);
+    showTyping();
+
+    try {
+      const res = await fetch(`${API}/chat`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'X-Session-Id': sessionId},
+        body: JSON.stringify({message: text})
+      });
+      if (!res.ok) throw new Error((await res.json()).detail);
+      const data = await res.json();
+      removeTyping();
+      addMessage('agent', data.response);
+      loadLeaveBalance(); // refresh leave bars after each message
+    } catch(e) {
+      removeTyping();
+      addMessage('agent', `⚠️ ${e.message || 'Connection error. Please try again.'}`);
+    }
+
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+
+  function addMessage(role, text) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    const avatar = role === 'user'
+      ? (currentUser?.name?.split(' ').map(n=>n[0]).join('').slice(0,2) || 'ME')
+      : '🤖';
+
+    // Format text: convert **bold**, preserve newlines
+    const formatted = text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+
+    div.innerHTML = `
+      <div class="msg-avatar">${avatar}</div>
+      <div class="msg-bubble">${formatted}</div>`;
+
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'message agent'; div.id = 'typingIndicator';
+    div.innerHTML = `
+      <div class="msg-avatar">🤖</div>
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  // ── Resume screening ─────────────────────────────────────────────────────────
+
+  async function screenResume() {
+    const jobId = document.getElementById('jobSelect').value;
+    const name  = document.getElementById('candName').value.trim();
+    const email = document.getElementById('candEmail').value.trim();
+    const cv    = document.getElementById('resumeText').value.trim();
+
+    if (!jobId || !name || !email || !cv) {
+      alert('Please fill in all fields before screening.');
+      return;
+    }
+
+    const btn = document.getElementById('screenBtn');
+    btn.disabled = true; btn.textContent = 'Screening...';
+
+    try {
+      const res = await fetch(`${API}/hr/screen`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'X-Session-Id': sessionId},
+        body: JSON.stringify({candidate_name:name, candidate_email:email, job_id:jobId, resume_text:cv})
+      });
+      if (!res.ok) throw new Error((await res.json()).detail);
+      const data = await res.json();
+
+      const rec = data.recommendation || 'Hold';
+      const score = Math.round((data.scores?.composite_score || data.match_score || 0) * 100);
+
+      const resultEl = document.getElementById('screeningResult');
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `
+        <div class="candidate-card" style="margin-top:0">
+          <div class="candidate-header">
+            <div class="candidate-name">${name}</div>
+            <span class="rec-badge rec-${rec.toLowerCase()}">${rec}</span>
+          </div>
+          <div class="score-bar-track">
+            <div class="score-bar-fill" style="width:${score}%"></div>
+          </div>
+          <div class="candidate-meta" style="margin-bottom:8px">
+            Composite: ${score}% ·
+            Skills: ${Math.round((data.scores?.skills_score||0)*100)}% ·
+            Experience: ${Math.round((data.scores?.experience_score||0)*100)}%
+          </div>
+          <div style="font-size:11px;color:#64748B">
+            <strong>Matched:</strong> ${data.skills_matched?.join(', ') || 'none'}<br>
+            <strong>Missing:</strong> ${data.skills_missing?.join(', ') || 'none'}
+          </div>
+        </div>`;
+
+      loadScreeningResults();
+
+    } catch(e) {
+      document.getElementById('screeningResult').style.display = 'block';
+      document.getElementById('screeningResult').innerHTML =
+        `<div class="login-error">${e.message}</div>`;
+    }
+
+    btn.disabled = false; btn.textContent = 'Screen Candidate';
+  }
+
+  // ── Tab and view switching ───────────────────────────────────────────────────
+
+  function setTab(name) {
+    ['overview','screen','results'].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+      document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display =
+        t === name ? 'block' : 'none';
+    });
+    if (name === 'results') loadScreeningResults();
+  }
+
+  function setView(view) {
+    ['chat','dashboard','hr','tickets'].forEach(v => {
+      const navEl = document.getElementById(`nav-${v}`);
+      if (navEl) navEl.classList.remove('active');
+    });
+    const active = document.getElementById(`nav-${view}`);
+    if (active) active.classList.add('active');
+    // For this single-page app, chat is always visible
+    // We just switch the right panel content
+    if (view === 'tickets') loadMyTickets();
+  }
+
+  async function loadMyTickets() {
+    const tabOverview = document.getElementById('tabOverview');
+    tabOverview.innerHTML = '<div class="dash-section-title" style="margin-bottom:10px">My Support Tickets</div><div id="myTicketsList"></div>';
+    try {
+      const res = await fetch(`${API}/employee/tickets`, {headers:{'X-Session-Id': sessionId}});
+      const tickets = await res.json();
+      const list = document.getElementById('myTicketsList');
+      if (!tickets.length) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎫</div>No tickets yet</div>';
+        return;
+      }
+      list.innerHTML = tickets.map(t => `
+        <div class="ticket-item">
+          <div class="ticket-header">
+            <span class="ticket-id">#${t.ticket_id}</span>
+            <span class="ticket-priority priority-${t.priority}">${t.priority}</span>
+          </div>
+          <div class="ticket-query">${t.query_text}</div>
+          <div class="ticket-meta">${t.category} · ${t.status} · ${t.created_at?.slice(0,10)}</div>
+          ${t.resolution_notes ? `<div style="font-size:11px;color:#16A34A;margin-top:4px">✓ ${t.resolution_notes}</div>` : ''}
+        </div>`).join('');
+    } catch(e) {}
+  }
+</script>
+</body>
+</html>
